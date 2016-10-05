@@ -1,7 +1,7 @@
 ## YAML Template.
 --- 
 zkHosts: "nn1.netangels.net:2181,nn2.netangels.net:2181,rm1.netangels.net:2181"   
-oddeyerulestable: oddeyerules
+metatable: test_oddeye-meta
 tsd.core.auto_create_metrics: false
 tsd.storage.enable_compaction: false
 tsd.storage.hbase.data_table: test_tsdb

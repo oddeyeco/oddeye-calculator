@@ -5,6 +5,9 @@
  */
 package co.oddeye.calculator;
 
+import co.oddeye.core.MetriccheckRule;
+import co.oddeye.core.OddeeyMetricMeta;
+import co.oddeye.core.OddeeyMetricMetaList;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
@@ -17,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentMap;
 import net.opentsdb.core.DataPoint;
 import net.opentsdb.core.DataPoints;
 import net.opentsdb.core.Query;
@@ -48,7 +52,9 @@ public class MainClass {
 
     private static final DateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:m:s");
 
-    private static Logger LOGGER = LoggerFactory.getLogger(MainClass.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainClass.class);
+    private static byte[] key;
+    private static final byte[] family = "d".getBytes();
 
     public static void main(String[] args) throws Exception {
 
@@ -95,7 +101,7 @@ public class MainClass {
         String quorum = String.valueOf(conf.get("zkHosts"));
         client = new org.hbase.async.HBaseClient(quorum);
 
-        String metatable = String.valueOf(conf.get("oddeyerulestable"));
+        String metatable = String.valueOf(conf.get("metatable"));
 
         net.opentsdb.utils.Config openTsdbConfig = new net.opentsdb.utils.Config(true);
         openTsdbConfig.overrideConfig("tsd.core.auto_create_metrics", String.valueOf(conf.get("tsd.core.auto_create_metrics")));
@@ -106,111 +112,51 @@ public class MainClass {
                 client,
                 openTsdbConfig);
 
-        List<String> Metrics = tsdb.suggestMetrics("", Integer.MAX_VALUE);
-
-        LOGGER.info("Metrics Count = " + Metrics.size());
-
-        final TSQuery tsquery = new TSQuery();
-
-        tsquery.setStart(Long.toString(StartCalendarObj.getTimeInMillis()));
-        tsquery.setEnd(Long.toString(EndCalendarObj.getTimeInMillis()));
-        final List<TagVFilter> filters = new ArrayList<>();
-        final ArrayList<TSSubQuery> sub_queries = new ArrayList<>(1);
-        final Map<String, String> tags = new HashMap<>();
-        final Map<String, SeekableView> datalist = new TreeMap<>();
-        byte[] key;
-        byte[] family;
-        byte[] qualifier;
-        byte[] value;
-        tags.put("host", "*");
-        tags.put("UUID", "*");
-        TagVFilter.mapToFilters(tags, filters, true);
-
-        for (String metric : Metrics) {
-//            metric = "cpu_user";
-            final TSSubQuery sub_query_dev = new TSSubQuery();
-//            metric = "sys_load_1";
-            sub_query_dev.setMetric(metric);
-            sub_query_dev.setAggregator("dev");
-            sub_query_dev.setFilters(filters);
-            sub_query_dev.setDownsample("1h-dev");
-            sub_query_dev.setIndex(0);
-            sub_queries.add(sub_query_dev);
-
-            final TSSubQuery sub_query_avg = new TSSubQuery();
-            sub_query_avg.setMetric(metric);
-            sub_query_avg.setAggregator("avg");
-
-            sub_query_avg.setFilters(filters);
-            sub_query_avg.setDownsample("1h-avg");
-            sub_queries.add(sub_query_avg);
-
-            final TSSubQuery sub_query_max = new TSSubQuery();
-            sub_query_max.setMetric(metric);
-            sub_query_max.setAggregator("max");
-
-            sub_query_max.setFilters(filters);
-            sub_query_max.setDownsample("1h-max");
-            sub_queries.add(sub_query_max);
-            final TSSubQuery sub_query_min = new TSSubQuery();
-            sub_query_min.setMetric(metric);
-            sub_query_min.setAggregator("min");
-
-            sub_query_min.setFilters(filters);
-            sub_query_min.setDownsample("1h-min");
-            sub_queries.add(sub_query_min);
-//            break;
+//        OddeeyMetricMeta mtrsc;
+        OddeeyMetricMetaList mtrscList;
+        try {
+            mtrscList = new OddeeyMetricMetaList(tsdb, metatable.getBytes());
+        } catch (Exception ex) {
+            mtrscList = new OddeeyMetricMetaList();
         }
-        tags.clear();
-        tsquery.setQueries(sub_queries);
-        tsquery.validateAndSetQuery();
-        Query[] tsdbqueries = tsquery.buildQueries(tsdb);
-        Map<String, String> Tagmap;
 
-        final Calendar CalendarObj = Calendar.getInstance();
-        long starttime;
-        long endtime;
-        // create some arrays for storing the results and the async calls
-        final int nqueries = tsdbqueries.length;
-
-        for (int i = 0; i < nqueries; i++) {
-            starttime = System.currentTimeMillis();
-            LOGGER.info("Start tsdbqueries");
-            final DataPoints[] series = tsdbqueries[i].run();
-            endtime = System.currentTimeMillis() - starttime;
-            LOGGER.info("Finish tsdbqueries " + i + "of "+nqueries+" in " + endtime + " ms");
-            for (final DataPoints datapoints : series) {
-                final SeekableView Datalist = datapoints.iterator();
-                Tagmap = null;
-                try {
-                    Tagmap = datapoints.getTags();
-                } catch (Exception e) {
-                    LOGGER.warn("Invalid tags");
-                    continue;
-                }
-
-//                datalist.put(Tagmap.get("host")+"|"+datapoints.getQueryIndex()  , Datalist);                
-                while (Datalist.hasNext()) {
-                    final DataPoint Point = Datalist.next();
-                    CalendarObj.setTimeInMillis(Point.timestamp());
-                    qualifier = ArrayUtils.addAll(datapoints.metricUID(), tsdb.getUID(UniqueId.UniqueIdType.TAGV, Tagmap.get("UUID")));
-                    qualifier = ArrayUtils.addAll(qualifier, tsdb.getUID(UniqueId.UniqueIdType.TAGV, Tagmap.get("host")));
-                    family = sub_queries.get(datapoints.getQueryIndex()).downsamplingSpecification().getFunction().toString().getBytes();
-                    key = ByteBuffer.allocate(12).putInt(CalendarObj.get(Calendar.YEAR)).putInt(CalendarObj.get(Calendar.DAY_OF_YEAR)).putInt(CalendarObj.get(Calendar.HOUR_OF_DAY)).array();
-                    value = ByteBuffer.allocate(8).putDouble(Point.doubleValue()).array();
-
-                    final PutRequest putrule = new PutRequest(metatable.getBytes(), key, family, qualifier, value);
-                    client.put(putrule);
-
-                }
+        int i = 0;
+        long Allstarttime = System.currentTimeMillis();
+        for (OddeeyMetricMeta mtrsc : mtrscList) {
+            long starttime = System.currentTimeMillis();
+            mtrsc.CalculateRules(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
+            key = mtrsc.getKey();
+            byte[][] qualifiers;
+            byte[][] values;
+            ConcurrentMap<String, MetriccheckRule> rulesmap = mtrsc.getRulesMap();
+            qualifiers = new byte[rulesmap.size()][];
+            values = new byte[rulesmap.size()][];
+            int index = 0;
+            for (Map.Entry<String, MetriccheckRule> rule : rulesmap.entrySet()) {
+                qualifiers[index] = rule.getValue().getKey();
+                values[index] = rule.getValue().getValues();
+                index++;
             }
-            endtime = System.currentTimeMillis() - starttime;
-            LOGGER.info(i + " of " + nqueries + " done in " + endtime + " ms");
-        }
 
+            if (qualifiers.length > 0) {
+                PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, qualifiers, values);
+                client.put(putvalue);
+            } else {
+                PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, "n".getBytes(), key);
+                client.put(putvalue);
+            }
+            i++;
+            long endtime = System.currentTimeMillis() - starttime;
+            LOGGER.warn(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
+
+        }
+        long Allendtime = System.currentTimeMillis() - Allstarttime;
+        LOGGER.warn(i + " of " + mtrscList.size() + " done in " + Allendtime/1000 + " s");
+
+//        }
         client.flush();
         LOGGER.warn("Flush all");
-        
+
         System.exit(0);
     }
 
