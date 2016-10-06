@@ -11,31 +11,17 @@ import co.oddeye.core.OddeeyMetricMetaList;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
-import net.opentsdb.core.DataPoint;
-import net.opentsdb.core.DataPoints;
-import net.opentsdb.core.Query;
-import net.opentsdb.core.SeekableView;
 import net.opentsdb.core.TSDB;
-import net.opentsdb.core.TSQuery;
-import net.opentsdb.core.TSSubQuery;
-import net.opentsdb.query.filter.TagVFilter;
-import net.opentsdb.uid.UniqueId;
 import net.opentsdb.utils.DateTime;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.PropertyConfigurator;
 import org.hbase.async.PutRequest;
 import org.slf4j.Logger;
@@ -53,9 +39,6 @@ public class MainClass {
 
     protected static org.hbase.async.HBaseClient client;
     private static TSDB tsdb;
-
-    private static final DateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:m:s");
-
     private static final Logger LOGGER = LoggerFactory.getLogger(MainClass.class);
     private static byte[] key;
     private static final byte[] family = "d".getBytes();
@@ -188,9 +171,7 @@ public class MainClass {
 
         }
         long Allendtime = System.currentTimeMillis() - Allstarttime;
-        LOGGER.info(i + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
-
-//        }
+        LOGGER.warn(i + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
         client.flush();
         LOGGER.warn("Flush all");
 
