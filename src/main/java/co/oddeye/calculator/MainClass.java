@@ -9,8 +9,12 @@ import co.oddeye.core.MetriccheckRule;
 import co.oddeye.core.OddeeyMetricMeta;
 import co.oddeye.core.OddeeyMetricMetaList;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -59,13 +63,30 @@ public class MainClass {
     public static void main(String[] args) throws Exception {
 
         String argskey = "";
-        String time = "1h-ago";
-        String configfile = "target/classes/config.yaml";
+        String time = "1w-ago";
+        String end_time = "now";
 
-        String logconfig = "target/classes/log4j.properties";
+        String configfile = "config.yaml";
+        String logconfig = "log4j.properties";
+
+        Path path = Paths.get(configfile);
+
+        if (Files.notExists(path)) {
+            configfile = "target/classes/config.yaml";
+        }
+
+        path = Paths.get(logconfig);
+
+        if (Files.notExists(path)) {
+            logconfig = "target/classes/log4j.properties";
+        }
+
         for (String s : args) {
-            if (argskey.equals("-t")) {
+            if (argskey.equals("-st")) {
                 time = s;
+            }
+            if (argskey.equals("-et")) {
+                end_time = s;
             }
             if (argskey.equals("-l")) {
                 logconfig = s;
@@ -76,9 +97,22 @@ public class MainClass {
             argskey = s;
         }
 
+        path = Paths.get(configfile);
+
+        if (Files.notExists(path)) {
+            throw new FileNotFoundException(path.toString());
+        }
+
+        path = Paths.get(logconfig);
+
+        if (Files.notExists(path)) {
+            throw new FileNotFoundException(path.toString());
+        }        
+        
         final Calendar EndCalendarObj = Calendar.getInstance();
         final Calendar StartCalendarObj = Calendar.getInstance();
         StartCalendarObj.setTime(new Date(DateTime.parseDateTimeString(time, null)));
+        EndCalendarObj.setTime(new Date(DateTime.parseDateTimeString(end_time, null)));
         EndCalendarObj.set(Calendar.MILLISECOND, 0);
         EndCalendarObj.set(Calendar.SECOND, 0);
         EndCalendarObj.set(Calendar.MINUTE, 0);
@@ -88,12 +122,15 @@ public class MainClass {
         StartCalendarObj.set(Calendar.MINUTE, 0);
 
         PropertyConfigurator.configure(logconfig);
-
-        String Filename = configfile;
-
         Yaml yaml = new Yaml();
         Map<String, Object> conf = (Map<String, Object>) yaml.load(new InputStreamReader(new FileInputStream(configfile)));
 
+        if (EndCalendarObj.getTimeInMillis()< StartCalendarObj.getTimeInMillis())
+        {
+            throw new Exception("End time "+EndCalendarObj.getTime()+" must be greater than the start time "+StartCalendarObj.getTime());
+        }
+        
+        
         LOGGER.info("Start calculate From " + StartCalendarObj.getTime() + " to " + EndCalendarObj.getTime());
         String current = new java.io.File(".").getCanonicalPath();
         LOGGER.debug("Current dir:" + current);
@@ -124,7 +161,7 @@ public class MainClass {
         long Allstarttime = System.currentTimeMillis();
         for (OddeeyMetricMeta mtrsc : mtrscList) {
             long starttime = System.currentTimeMillis();
-            mtrsc.CalculateRules(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
+            mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
             key = mtrsc.getKey();
             byte[][] qualifiers;
             byte[][] values;
@@ -147,11 +184,11 @@ public class MainClass {
             }
             i++;
             long endtime = System.currentTimeMillis() - starttime;
-            LOGGER.warn(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
+            LOGGER.info(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
 
         }
         long Allendtime = System.currentTimeMillis() - Allstarttime;
-        LOGGER.warn(i + " of " + mtrscList.size() + " done in " + Allendtime/1000 + " s");
+        LOGGER.info(i + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
 
 //        }
         client.flush();
