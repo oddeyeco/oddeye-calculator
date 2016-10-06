@@ -46,7 +46,7 @@ public class MainClass {
     public static void main(String[] args) throws Exception {
 
         String argskey = "";
-        String time = "1w-ago";
+        String time = "1h-ago";
         String end_time = "now";
 
         String configfile = "config.yaml";
@@ -114,7 +114,7 @@ public class MainClass {
         }
         
         
-        LOGGER.info("Start calculate From " + StartCalendarObj.getTime() + " to " + EndCalendarObj.getTime());
+        LOGGER.warn("Start calculate From " + StartCalendarObj.getTime() + " to " + EndCalendarObj.getTime());
         String current = new java.io.File(".").getCanonicalPath();
         LOGGER.debug("Current dir:" + current);
 
