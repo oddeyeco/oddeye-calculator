@@ -90,8 +90,8 @@ public class MainClass {
 
         if (Files.notExists(path)) {
             throw new FileNotFoundException(path.toString());
-        }        
-        
+        }
+
         final Calendar EndCalendarObj = Calendar.getInstance();
         final Calendar StartCalendarObj = Calendar.getInstance();
         StartCalendarObj.setTime(new Date(DateTime.parseDateTimeString(time, null)));
@@ -108,12 +108,10 @@ public class MainClass {
         Yaml yaml = new Yaml();
         Map<String, Object> conf = (Map<String, Object>) yaml.load(new InputStreamReader(new FileInputStream(configfile)));
 
-        if (EndCalendarObj.getTimeInMillis()< StartCalendarObj.getTimeInMillis())
-        {
-            throw new Exception("End time "+EndCalendarObj.getTime()+" must be greater than the start time "+StartCalendarObj.getTime());
+        if (EndCalendarObj.getTimeInMillis() < StartCalendarObj.getTimeInMillis()) {
+            throw new Exception("End time " + EndCalendarObj.getTime() + " must be greater than the start time " + StartCalendarObj.getTime());
         }
-        
-        
+
         LOGGER.warn("Start calculate From " + StartCalendarObj.getTime() + " to " + EndCalendarObj.getTime());
         String current = new java.io.File(".").getCanonicalPath();
         LOGGER.debug("Current dir:" + current);
@@ -142,34 +140,39 @@ public class MainClass {
 
         int i = 0;
         long Allstarttime = System.currentTimeMillis();
-        for (OddeeyMetricMeta mtrsc : mtrscList) {
-            long starttime = System.currentTimeMillis();
-            mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
-            key = mtrsc.getKey();
-            byte[][] qualifiers;
-            byte[][] values;
-            ConcurrentMap<String, MetriccheckRule> rulesmap = mtrsc.getRulesMap();
-            qualifiers = new byte[rulesmap.size()][];
-            values = new byte[rulesmap.size()][];
-            int index = 0;
-            for (Map.Entry<String, MetriccheckRule> rule : rulesmap.entrySet()) {
-                qualifiers[index] = rule.getValue().getKey();
-                values[index] = rule.getValue().getValues();
-                index++;
-            }
+        try {
+            for (OddeeyMetricMeta mtrsc : mtrscList) {
+                long starttime = System.currentTimeMillis();
+                mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
+                key = mtrsc.getKey();
+                byte[][] qualifiers;
+                byte[][] values;
+                ConcurrentMap<String, MetriccheckRule> rulesmap = mtrsc.getRulesMap();
+                qualifiers = new byte[rulesmap.size()][];
+                values = new byte[rulesmap.size()][];
+                int index = 0;
+                for (Map.Entry<String, MetriccheckRule> rule : rulesmap.entrySet()) {
+                    qualifiers[index] = rule.getValue().getKey();
+                    values[index] = rule.getValue().getValues();
+                    index++;
+                }
 
-            if (qualifiers.length > 0) {
-                PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, qualifiers, values);
-                client.put(putvalue);
-            } else {
-                PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, "n".getBytes(), key);
-                client.put(putvalue);
-            }
-            i++;
-            long endtime = System.currentTimeMillis() - starttime;
-            LOGGER.info(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
+                if (qualifiers.length > 0) {
+                    PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, qualifiers, values);
+                    client.put(putvalue);
+                } else {
+                    PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, "n".getBytes(), key);
+                    client.put(putvalue);
+                }
+                i++;
+                long endtime = System.currentTimeMillis() - starttime;
+                LOGGER.info(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
 
+            }
+        } catch (Exception e) {
+            throw new Exception(e);
         }
+
         long Allendtime = System.currentTimeMillis() - Allstarttime;
         LOGGER.warn(i + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
         client.flush();
