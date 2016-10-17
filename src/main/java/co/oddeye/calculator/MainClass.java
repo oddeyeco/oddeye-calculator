@@ -143,6 +143,8 @@ public class MainClass {
         try {
             for (OddeeyMetricMeta mtrsc : mtrscList.values()) {               
                 long starttime = System.currentTimeMillis();
+                
+                
                 mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
                 key = mtrsc.getKey();
                 byte[][] qualifiers;
@@ -166,6 +168,11 @@ public class MainClass {
                 }
                 i++;
                 long endtime = System.currentTimeMillis() - starttime;
+                if (endtime>300)
+                {
+                    LOGGER.warn(mtrsc.getName()+" "+mtrsc.getTags().toString());
+                    LOGGER.warn(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
+                }
                 LOGGER.info(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
 
             }
