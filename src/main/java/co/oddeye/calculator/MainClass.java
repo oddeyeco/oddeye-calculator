@@ -141,7 +141,7 @@ public class MainClass {
         int i = 0;
         long Allstarttime = System.currentTimeMillis();
         try {
-            for (OddeeyMetricMeta mtrsc : mtrscList.values()) {
+            for (OddeeyMetricMeta mtrsc : mtrscList.values()) {               
                 long starttime = System.currentTimeMillis();
                 mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
                 key = mtrsc.getKey();
