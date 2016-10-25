@@ -11,19 +11,31 @@ import co.oddeye.core.OddeeyMetricMetaList;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import net.opentsdb.core.TSDB;
 import net.opentsdb.utils.DateTime;
 import org.apache.log4j.PropertyConfigurator;
+import org.hbase.async.BinaryComparator;
+import org.hbase.async.CompareFilter;
+import org.hbase.async.GetRequest;
+import org.hbase.async.KeyValue;
 import org.hbase.async.PutRequest;
+import org.hbase.async.QualifierFilter;
+import org.hbase.async.ScanFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -46,8 +58,9 @@ public class MainClass {
     public static void main(String[] args) throws Exception {
 
         String argskey = "";
-        String time = "1h-ago";
+        String time = "1d-ago";
         String end_time = "now";
+        Short daycount = 1;
 
         String configfile = "config.yaml";
         String logconfig = "log4j.properties";
@@ -77,6 +90,9 @@ public class MainClass {
             if (argskey.equals("-c")) {
                 configfile = s;
             }
+            if (argskey.equals("-d")) {
+                daycount = Short.parseShort(s);
+            }            
             argskey = s;
         }
 
@@ -138,14 +154,63 @@ public class MainClass {
             mtrscList = new OddeeyMetricMetaList();
         }
 
+//        final Map<String, String> list = new HashMap<>();
+//        final Map<String, String> cluster = new HashMap<>();
+//        final Map<String, String> host = new HashMap<>();
+//        for (OddeeyMetricMeta mtrsc : mtrscList.values()) {
+//            list.put(mtrsc.getTags().get("UUID").getValue(), mtrsc.getTags().get("UUID").getValue());
+//            cluster.put(mtrsc.getTags().get("cluster").getValue(), mtrsc.getTags().get("cluster").getValue());
+//            host.put(mtrsc.getTags().get("host").getValue(), mtrsc.getTags().get("host").getValue());
+//
+//        }
+//        System.out.println(list.size());
+//        System.out.println(cluster.size());
+//        System.out.println(cluster);
+//        System.out.println(host.size());
         int i = 0;
         long Allstarttime = System.currentTimeMillis();
         try {
-            for (OddeeyMetricMeta mtrsc : mtrscList.values()) {               
+            for (OddeeyMetricMeta mtrsc : mtrscList.values()) {
+//                if (!mtrsc.getName().equals("net_bytes_sent"))                
+//                {
+//                    continue;
+//                }
+//                if (!mtrsc.getTags().get("host").getValue().equals("cassa007.mouseflow.eu"))                
+//                {
+//                    continue;
+//                }                
                 long starttime = System.currentTimeMillis();
+//                EndCalendarObj.set(Calendar.HOUR, 10);
+//                EndCalendarObj.set(Calendar.DATE, 24);
+//                MetriccheckRule Rule = mtrsc.getRule(StartCalendarObj, metatable.getBytes(), client);
+//                GetRequest get = new GetRequest(metatable.getBytes(), mtrsc.getKey());
+//                final ArrayList<KeyValue> ruledata = client.get(get).joinUninterruptibly();
+//                for (final KeyValue kv : ruledata) {
+//                    final byte[] timekey = kv.qualifier();
+//                    if (Arrays.equals(timekey, "n".getBytes()))
+//                    {
+//                        continue;
+//                    }
+//                    StartCalendarObj.setTimeInMillis(0);
+//                    byte[] b_value = Arrays.copyOfRange(timekey, 0, 2);
+//                    StartCalendarObj.set(Calendar.YEAR, ByteBuffer.wrap(b_value).getShort());
+//                    b_value = Arrays.copyOfRange(timekey, 2, 4);
+//                    StartCalendarObj.set(Calendar.DAY_OF_YEAR, ByteBuffer.wrap(b_value).getShort());
+//                    b_value = Arrays.copyOfRange(timekey, 4, 6);
+//                    StartCalendarObj.set(Calendar.HOUR_OF_DAY, ByteBuffer.wrap(b_value).getShort());
+//                    System.out.println(StartCalendarObj.getTime());
+//
+//                }
+//                System.out.println(Rule);                
+//                LOGGER.warn(mtrsc.getName() + " " + mtrsc.getTags().toString());
+//                continue;
                 
+                for (int j = 0; j < daycount; j++) {
+                    mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);    
+                    StartCalendarObj.add(Calendar.DATE, -1);
+                    EndCalendarObj.add(Calendar.DATE, -1);
+                }
                 
-                mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);
                 key = mtrsc.getKey();
                 byte[][] qualifiers;
                 byte[][] values;
@@ -168,11 +233,11 @@ public class MainClass {
                 }
                 i++;
                 long endtime = System.currentTimeMillis() - starttime;
-                if (endtime>300)
-                {
+//                if (endtime>300)
+//                {
                     LOGGER.warn(mtrsc.getName()+" "+mtrsc.getTags().toString());
                     LOGGER.warn(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
-                }
+//                }
                 LOGGER.info(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
 
             }
@@ -184,6 +249,7 @@ public class MainClass {
         LOGGER.warn(i + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
         client.flush();
         LOGGER.warn("Flush all");
+        LOGGER.warn("mtrscList.size:" + mtrscList.size());
 
         System.exit(0);
     }
