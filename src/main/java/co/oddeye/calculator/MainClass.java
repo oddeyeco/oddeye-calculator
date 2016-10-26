@@ -26,6 +26,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import net.opentsdb.core.TSDB;
 import net.opentsdb.utils.DateTime;
 import org.apache.log4j.PropertyConfigurator;
@@ -50,15 +53,18 @@ import org.yaml.snakeyaml.Yaml;
 public class MainClass {
 
     protected static org.hbase.async.HBaseClient client;
-    private static TSDB tsdb;
+    protected static TSDB tsdb;
     private static final Logger LOGGER = LoggerFactory.getLogger(MainClass.class);
     private static byte[] key;
     private static final byte[] family = "d".getBytes();
+    private static final Calendar CalendarObj = Calendar.getInstance();
+    private static int a_numThreads;
+    private static ExecutorService executor;
 
     public static void main(String[] args) throws Exception {
 
         String argskey = "";
-        String time = "1d-ago";
+        String time = "1h-ago";
         String end_time = "now";
         Short daycount = 1;
 
@@ -92,7 +98,7 @@ public class MainClass {
             }
             if (argskey.equals("-d")) {
                 daycount = Short.parseShort(s);
-            }            
+            }
             argskey = s;
         }
 
@@ -169,84 +175,33 @@ public class MainClass {
 //        System.out.println(host.size());
         int i = 0;
         long Allstarttime = System.currentTimeMillis();
+        int threadNumber = 0;
         try {
+            executor = Executors.newFixedThreadPool(10);
+
+            // now create an object to consume the messages
+            //
+            
+
             for (OddeeyMetricMeta mtrsc : mtrscList.values()) {
-//                if (!mtrsc.getName().equals("net_bytes_sent"))                
-//                {
-//                    continue;
-//                }
-//                if (!mtrsc.getTags().get("host").getValue().equals("cassa007.mouseflow.eu"))                
-//                {
-//                    continue;
-//                }                
-                long starttime = System.currentTimeMillis();
-//                EndCalendarObj.set(Calendar.HOUR, 10);
-//                EndCalendarObj.set(Calendar.DATE, 24);
-//                MetriccheckRule Rule = mtrsc.getRule(StartCalendarObj, metatable.getBytes(), client);
-//                GetRequest get = new GetRequest(metatable.getBytes(), mtrsc.getKey());
-//                final ArrayList<KeyValue> ruledata = client.get(get).joinUninterruptibly();
-//                for (final KeyValue kv : ruledata) {
-//                    final byte[] timekey = kv.qualifier();
-//                    if (Arrays.equals(timekey, "n".getBytes()))
-//                    {
-//                        continue;
-//                    }
-//                    StartCalendarObj.setTimeInMillis(0);
-//                    byte[] b_value = Arrays.copyOfRange(timekey, 0, 2);
-//                    StartCalendarObj.set(Calendar.YEAR, ByteBuffer.wrap(b_value).getShort());
-//                    b_value = Arrays.copyOfRange(timekey, 2, 4);
-//                    StartCalendarObj.set(Calendar.DAY_OF_YEAR, ByteBuffer.wrap(b_value).getShort());
-//                    b_value = Arrays.copyOfRange(timekey, 4, 6);
-//                    StartCalendarObj.set(Calendar.HOUR_OF_DAY, ByteBuffer.wrap(b_value).getShort());
-//                    System.out.println(StartCalendarObj.getTime());
-//
-//                }
-//                System.out.println(Rule);                
-//                LOGGER.warn(mtrsc.getName() + " " + mtrsc.getTags().toString());
-//                continue;
-                
-                for (int j = 0; j < daycount; j++) {
-                    mtrsc.CalculateRulesAsync(StartCalendarObj.getTimeInMillis(), EndCalendarObj.getTimeInMillis(), tsdb);    
-                    StartCalendarObj.add(Calendar.DATE, -1);
-                    EndCalendarObj.add(Calendar.DATE, -1);
-                }
-                
-                key = mtrsc.getKey();
-                byte[][] qualifiers;
-                byte[][] values;
-                ConcurrentMap<String, MetriccheckRule> rulesmap = mtrsc.getRulesMap();
-                qualifiers = new byte[rulesmap.size()][];
-                values = new byte[rulesmap.size()][];
-                int index = 0;
-                for (Map.Entry<String, MetriccheckRule> rule : rulesmap.entrySet()) {
-                    qualifiers[index] = rule.getValue().getKey();
-                    values[index] = rule.getValue().getValues();
-                    index++;
-                }
 
-                if (qualifiers.length > 0) {
-                    PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, qualifiers, values);
-                    client.put(putvalue);
-                } else {
-                    PutRequest putvalue = new PutRequest(metatable.getBytes(), key, family, "n".getBytes(), key);
-                    client.put(putvalue);
-                }
-                i++;
-                long endtime = System.currentTimeMillis() - starttime;
-//                if (endtime>300)
-//                {
-                    LOGGER.warn(mtrsc.getName()+" "+mtrsc.getTags().toString());
-                    LOGGER.warn(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
-//                }
-                LOGGER.info(i + " of " + mtrscList.size() + " done in " + endtime + " ms");
-
+                executor.submit(new CalculateRuleTask(threadNumber,mtrsc,StartCalendarObj,EndCalendarObj,metatable));
+                threadNumber++;
+//            i++;
             }
+            
+            executor.shutdown();
+//            final boolean done = executor.awaitTermination(1, TimeUnit.MINUTES);
+            while (!executor.awaitTermination(10, TimeUnit.MINUTES))
+            {
+                Thread.sleep(1);
+            }            
         } catch (Exception e) {
             throw new Exception(e);
         }
 
         long Allendtime = System.currentTimeMillis() - Allstarttime;
-        LOGGER.warn(i + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
+        LOGGER.warn(threadNumber + " of " + mtrscList.size() + " done in " + Allendtime / 1000 + " s");
         client.flush();
         LOGGER.warn("Flush all");
         LOGGER.warn("mtrscList.size:" + mtrscList.size());
