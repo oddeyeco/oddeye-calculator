@@ -177,25 +177,22 @@ public class MainClass {
         long Allstarttime = System.currentTimeMillis();
         int threadNumber = 0;
         try {
-            executor = Executors.newFixedThreadPool(10);
+            executor = Executors.newFixedThreadPool(1);
 
             // now create an object to consume the messages
             //
-            
-
             for (OddeeyMetricMeta mtrsc : mtrscList.values()) {
 
-                executor.submit(new CalculateRuleTask(threadNumber,mtrsc,StartCalendarObj,EndCalendarObj,metatable));
+                executor.submit(new CalculateRuleTask(threadNumber, mtrsc, StartCalendarObj, EndCalendarObj, metatable));
                 threadNumber++;
 //            i++;
             }
-            
+
             executor.shutdown();
 //            final boolean done = executor.awaitTermination(1, TimeUnit.MINUTES);
-            while (!executor.awaitTermination(10, TimeUnit.MINUTES))
-            {
+            while (!executor.awaitTermination(10, TimeUnit.MINUTES)) {
                 Thread.sleep(1);
-            }            
+            }
         } catch (Exception e) {
             throw new Exception(e);
         }
