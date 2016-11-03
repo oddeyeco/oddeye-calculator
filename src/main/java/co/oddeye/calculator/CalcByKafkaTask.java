@@ -201,7 +201,7 @@ public class CalcByKafkaTask implements Runnable {
                                     LOGGER.warn("Rule joinUninterruptibly " + CalendarObjRules.getTime() + " to 3 houre time: " + endtime + " Name:" + mtrsc.getName() + " host" + mtrsc.getTags().get("host").getValue());
                                 }
                                 else {
-                                        LOGGER.warn("All Rule is Exist: " + CalendarObjRules.getTime() + "-" + mtrsc.getName() + " " + mtrsc.getTags().get("host").getValue());
+                                        LOGGER.info("All Rule is Exist: " + CalendarObjRules.getTime() + "-" + mtrsc.getName() + " " + mtrsc.getTags().get("host").getValue());
                                         //+ "-" + mtrsc.getName() + " " + mtrsc.getTags().get("host").getValue()
                                     }
                                 if (needsave) {
