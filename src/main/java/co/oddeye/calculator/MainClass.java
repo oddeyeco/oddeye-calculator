@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Calendar;
+import java.util.UUID;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,8 +46,9 @@ public class MainClass {
     static final Logger log = LoggerFactory.getLogger(MainClass.class);
 
     public MainClass(String a_zookeeper, String a_groupId, String a_topic) {
-        consumer = kafka.consumer.Consumer.createJavaConsumerConnector(
-                createConsumerConfig(a_zookeeper, a_groupId));
+        ConsumerConfig kafkaconf = createConsumerConfig(a_zookeeper, a_groupId);        
+        
+        consumer = kafka.consumer.Consumer.createJavaConsumerConnector(kafkaconf);
         this.topic = a_topic;
     }
 
@@ -89,9 +91,10 @@ public class MainClass {
         Properties props = new Properties();
         props.put("zookeeper.connect", a_zookeeper);
         props.put("group.id", a_groupId);
-        props.put("zookeeper.session.timeout.ms", "400");
-        props.put("zookeeper.sync.time.ms", "200");
-        props.put("auto.commit.interval.ms", "1000");
+        props.put("zookeeper.session.timeout.ms", "6000");
+        props.put("zookeeper.sync.time.ms", "2000");
+        props.put("auto.commit.interval.ms", "5000");
+//        props.put("auto.commit.interval.ms", "1000");
 
         return new ConsumerConfig(props);
     }
@@ -149,16 +152,18 @@ public class MainClass {
                 openTsdbConfig);
 
         String zooKeeper = String.valueOf(conf.get("kafka.zkHosts"));
-        String groupId = String.valueOf(conf.get("kafka.groupId"));
-        String topic = String.valueOf(conf.get("kafka.topic"));
-
-        final Calendar CalendarObj = Calendar.getInstance();
+        String groupId = UUID.randomUUID().toString(); //String.valueOf(conf.get("kafka.groupId"));
+        String topic = String.valueOf(conf.get("kafka.topic"));        
 
         MainClass example = new MainClass(zooKeeper, groupId, topic);
         example.run(threads);
         if (time == -1) {
             while (true) {
-
+//                Thread.sleep(3600000);
+//                example.shutdown();
+//                Thread.sleep(10000);
+//                example.run(threads);
+//                System.out.println("Restart Threads");
             }
         } else {
             try {

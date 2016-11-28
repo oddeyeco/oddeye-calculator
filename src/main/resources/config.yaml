@@ -9,4 +9,4 @@ tsd.storage.hbase.uid_table: test_tsdb-uid
    
 kafka.zkHosts: "nn1.netangels.net:2181,nn2.netangels.net:2181,rm1.netangels.net:2181"      
 kafka.topic: oddeyetsdb
-kafka.groupId: oddeyetsdbcalculator_test
+kafka.groupId: oddeyetsdbcalculator
