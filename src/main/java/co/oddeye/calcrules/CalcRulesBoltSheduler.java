@@ -19,8 +19,8 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
-import net.opentsdb.core.DataPoint;
 import net.opentsdb.core.DataPoints;
+import net.opentsdb.core.DataPoint;
 import net.opentsdb.core.Query;
 import net.opentsdb.core.SeekableView;
 import net.opentsdb.core.TSDB;
@@ -44,6 +44,7 @@ public class CalcRulesBoltSheduler {
     private Config openTsdbConfig;
     private org.hbase.async.Config clientconf;
     private final byte[] metatable;
+    private final byte[] exruletable;
     private OddeeyMetricMetaList MetricMetaList;
     private Calendar CalendarObjRules;
     private boolean needsave;
@@ -54,12 +55,12 @@ public class CalcRulesBoltSheduler {
 
     private JsonParser parser = null;
 
-
     /**
      *
      */
     public CalcRulesBoltSheduler() {
         this.metatable = "oddeye-meta".getBytes();
+        this.exruletable = "oddeye-exrules".getBytes();
     }
 
     public void prepare() {
@@ -119,7 +120,8 @@ public class CalcRulesBoltSheduler {
             CalendarObjRules.add(Calendar.HOUR, 2);
             Map<String, Map<Integer, OddeeyMetricMeta>> namemap = new HashMap<>();
             for (Map.Entry<Integer, OddeeyMetricMeta> meta : MetricMetaList.entrySet()) {
-                if ((!meta.getValue().isSpecial()) && (meta.getValue().getLasttime() > (starttime - (1000 * 60 * 60)))) {
+//                if ((!meta.getValue().isSpecial()) && (meta.getValue().getLasttime() > (starttime - (1000 * 60 * 60)))) {
+                if (!meta.getValue().isSpecial()) {
                     if (!namemap.containsKey(meta.getValue().getName())) {
                         namemap.put(meta.getValue().getName(), new HashMap<>());
                     }
@@ -169,6 +171,18 @@ public class CalcRulesBoltSheduler {
                                     Metricstats.put(Hex.encodeHexString(time_key), stats);
                                 }
                                 stats.addValue(R_value);
+                                                              
+                                Metricstats = statslist.get("@" + tmpmetric.getName());
+                                if (Metricstats == null) {
+                                    Metricstats = new HashMap<>();
+                                    statslist.put("@" + tmpmetric.getName(), Metricstats);
+                                }
+                                stats = Metricstats.get(Hex.encodeHexString(time_key));
+                                if (stats == null) {
+                                    stats = new DescriptiveStatistics();
+                                    Metricstats.put(Hex.encodeHexString(time_key), stats);
+                                }
+                                stats.addValue(R_value);                                
                             }
                         }
                     }
@@ -209,14 +223,17 @@ public class CalcRulesBoltSheduler {
                 }
 //                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis()));
                 Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();
-                System.out.println("calmetriccount " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");                                
+                System.out.println("calmetriccount " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");                
             }
-            System.out.println("finish " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
+            System.out.println("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
             for (Map.Entry<String, Map<String, DescriptiveStatistics>> stat : statslist.entrySet()) {
+                byte[] table;
                 if (stat.getKey().charAt(0) == '@') {
                     key = stat.getKey().getBytes();
+                    table = exruletable;
                 } else {
                     key = Hex.decodeHex(stat.getKey());
+                    table = metatable;
                 }
 
                 byte[][] qualifiers = new byte[stat.getValue().size()][];
@@ -234,10 +251,10 @@ public class CalcRulesBoltSheduler {
                     values[index] = RuleItem.getValues();
                     index++;
                 }
-                System.out.println(stat.getKey());
+//                System.out.println(stat.getKey());
                 if (qualifiers.length > 0) {
                     try {
-                        PutRequest putvalue = new PutRequest(metatable, key, family, qualifiers, values);
+                        PutRequest putvalue = new PutRequest(table, key, family, qualifiers, values);
                         globalFunctions.getClient(clientconf).put(putvalue);
                     } catch (Exception e) {
                         LOGGER.error("catch In Multi qualifiers stackTrace: " + globalFunctions.stackTrace(e));
@@ -245,8 +262,9 @@ public class CalcRulesBoltSheduler {
                     }
                 }
             }
+            System.out.println("finish Write" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " in min " + metriccount + " calmetriccount " + calmetriccount);
             tsdb.shutdown().join();
-            client.shutdown().join();            
+            client.shutdown().join();
         } catch (Exception ex) {
             LOGGER.warn(globalFunctions.stackTrace(ex));
         }
