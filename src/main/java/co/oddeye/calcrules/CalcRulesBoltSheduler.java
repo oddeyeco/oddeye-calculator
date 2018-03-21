@@ -147,8 +147,8 @@ public class CalcRulesBoltSheduler {
 
                     for (DataPoints[] series : query_results) {
                         for (final DataPoints datapoints : series) {
-                            final SeekableView Datalist = datapoints.iterator();
-                            System.out.println(datapoints.getTags() + " - " + datapoints.metricName());
+                            final SeekableView Datalist = datapoints.iterator();                            
+                            LOGGER.info(datapoints.getTags() + " - " + datapoints.metricName());
                             OddeeyMetricMeta tmpmetric = new OddeeyMetricMeta(datapoints.metricName(), datapoints.getTags(), tsdb);
                             while (Datalist.hasNext()) {
                                 final DataPoint Point = Datalist.next();
@@ -190,9 +190,7 @@ public class CalcRulesBoltSheduler {
                     return null;
                 }
             }
-
-            System.out.println(namemap.size());
-
+            LOGGER.warn("namemap size= "+namemap.size());            
             final Calendar CalObjRules = (Calendar) CalendarObjRules.clone();
             CalObjRules.set(Calendar.MILLISECOND, 0);
             CalObjRules.set(Calendar.SECOND, 0);
@@ -222,10 +220,11 @@ public class CalcRulesBoltSheduler {
                     deferreds.add(tsdbqueries[nq].runAsync());
                 }
 //                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis()));
-                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();
-                System.out.println("calmetriccount " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");                
+                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();                
+                LOGGER.info("calmetriccount " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");
             }
             System.out.println("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
+            LOGGER.warn("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
             for (Map.Entry<String, Map<String, DescriptiveStatistics>> stat : statslist.entrySet()) {
                 byte[] table;
                 if (stat.getKey().charAt(0) == '@') {
