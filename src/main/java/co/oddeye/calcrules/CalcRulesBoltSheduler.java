@@ -90,7 +90,7 @@ public class CalcRulesBoltSheduler {
 
 //            this.metatable = String.valueOf(conf.get("metatable")).getBytes();
             try {
-                LOGGER.warn("Start read meta in hbase");
+                LOGGER.warn("Start read meta in hbase");                
 //                MetricMetaList = new OddeeyMetricMetaList();
                 MetricMetaList = new OddeeyMetricMetaList(globalFunctions.getTSDB(openTsdbConfig, clientconf), this.metatable);
                 LOGGER.warn("End read meta in hbase");
@@ -148,7 +148,7 @@ public class CalcRulesBoltSheduler {
                     for (DataPoints[] series : query_results) {
                         for (final DataPoints datapoints : series) {
                             final SeekableView Datalist = datapoints.iterator();                            
-                            LOGGER.info(datapoints.getTags() + " - " + datapoints.metricName());
+                            LOGGER.info( datapoints.metricName() + " - " + datapoints.getTags());
                             OddeeyMetricMeta tmpmetric = new OddeeyMetricMeta(datapoints.metricName(), datapoints.getTags(), tsdb);
                             while (Datalist.hasNext()) {
                                 final DataPoint Point = Datalist.next();
@@ -221,7 +221,7 @@ public class CalcRulesBoltSheduler {
                 }
 //                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis()));
                 Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();                
-                LOGGER.info("calmetriccount " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");
+                LOGGER.info("Metric "+name+" count " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");
             }
             System.out.println("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
             LOGGER.warn("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);

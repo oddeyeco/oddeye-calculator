@@ -16,11 +16,10 @@ import java.util.logging.Logger;
 public class Main {
 
     public static void main(String[] args) throws UnsupportedEncodingException {
-
         try {
-          CalcRulesBoltSheduler Calcer = new CalcRulesBoltSheduler();
-          Calcer.prepare();
-          Calcer.execute();
+            CalcRulesBoltSheduler Calcer = new CalcRulesBoltSheduler();
+            Calcer.prepare();
+            Calcer.execute();
         } catch (Exception ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
