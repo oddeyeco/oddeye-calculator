@@ -1,0 +1,16 @@
+## YAML Template.
+Tsdb:
+  zkHosts: "zk00.oddeye.co:2181,zk01.oddeye.co:2181,zk02.oddeye.co:2181"
+  hbase.rpcs.batch.size: 4096       
+  metatable: oddeye-meta
+  exrulestable: oddeye-exrules
+  errorstable: oddeye-errors
+  errorshistorytable: oddeye-error-history
+  errorslasttable: oddeye-error-last
+  usertable: oddeyeusers  
+  consumptionusertable: oddeye-consumption  
+ 
+  tsd.core.auto_create_metrics: true
+  tsd.storage.enable_compaction: false
+  tsd.storage.hbase.data_table: oddeye-data
+  tsd.storage.hbase.uid_table: oddeye-data-uid

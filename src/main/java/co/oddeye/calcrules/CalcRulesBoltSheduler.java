@@ -54,6 +54,7 @@ public class CalcRulesBoltSheduler {
     private final byte[] family = "d".getBytes();
 
     private JsonParser parser = null;
+    private Map<String,String> conf;
 
     /**
      *
@@ -63,24 +64,28 @@ public class CalcRulesBoltSheduler {
         this.exruletable = "oddeye-exrules".getBytes();
     }
 
+    public CalcRulesBoltSheduler(java.util.Map config) {
+        conf =(Map<String,String>) config.get("Tsdb");
+        this.metatable =conf.get("metatable").getBytes();
+        this.exruletable = conf.get("exrulestable").getBytes(); //"oddeye-exrules".getBytes();
+    }
+    
     public void prepare() {
         LOGGER.warn("DoPrepare Calc Rules ");
 
         parser = new JsonParser();
 
         try {
-            String quorum = "zk00.oddeye.co:2181,zk01.oddeye.co:2181,zk02.oddeye.co:2181";
+            String quorum = conf.get("zkHosts");
             openTsdbConfig = new net.opentsdb.utils.Config(true);
 
-            openTsdbConfig = new net.opentsdb.utils.Config(true);
-            openTsdbConfig.overrideConfig("tsd.core.auto_create_metrics", String.valueOf(true));
-            openTsdbConfig.overrideConfig("tsd.storage.enable_compaction", String.valueOf(false));
+            openTsdbConfig.overrideConfig("tsd.core.auto_create_metrics", String.valueOf(conf.get("tsd.core.auto_create_metrics")));
+            openTsdbConfig.overrideConfig("tsd.storage.enable_compaction", String.valueOf(conf.get("tsd.storage.enable_compaction")));
+            openTsdbConfig.overrideConfig("tsd.storage.hbase.data_table", String.valueOf(conf.get("tsd.storage.hbase.data_table")));
+            openTsdbConfig.overrideConfig("tsd.storage.hbase.uid_table", String.valueOf(conf.get("tsd.storage.hbase.uid_table")));
 
             openTsdbConfig.overrideConfig("tsd.core.enable_api", String.valueOf(false));
             openTsdbConfig.overrideConfig("tsd.core.enable_ui", String.valueOf(false));
-
-            openTsdbConfig.overrideConfig("tsd.storage.hbase.data_table", "oddeye-data");
-            openTsdbConfig.overrideConfig("tsd.storage.hbase.uid_table", "oddeye-data-uid");
 
             clientconf = new org.hbase.async.Config();
             clientconf.overrideConfig("hbase.zookeeper.quorum", quorum);
@@ -91,8 +96,7 @@ public class CalcRulesBoltSheduler {
 //            this.metatable = String.valueOf(conf.get("metatable")).getBytes();
             try {
                 LOGGER.warn("Start read meta in hbase");                
-//                MetricMetaList = new OddeeyMetricMetaList();
-                MetricMetaList = new OddeeyMetricMetaList(globalFunctions.getTSDB(openTsdbConfig, clientconf), this.metatable);
+                MetricMetaList = new OddeeyMetricMetaList(globalFunctions.getTSDB(openTsdbConfig, clientconf), this.metatable,10);
                 LOGGER.warn("End read meta in hbase");
             } catch (Exception ex) {
                 MetricMetaList = new OddeeyMetricMetaList();
