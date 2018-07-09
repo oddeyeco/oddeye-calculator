@@ -9,7 +9,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>oddeye-core</artifactId>
-            <version>0.4</version>
+            <version>0.6</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
