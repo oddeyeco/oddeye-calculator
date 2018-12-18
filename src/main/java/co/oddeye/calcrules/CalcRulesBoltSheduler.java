@@ -54,7 +54,7 @@ public class CalcRulesBoltSheduler {
     private final byte[] family = "d".getBytes();
 
     private JsonParser parser = null;
-    private Map<String,String> conf;
+    private Map<String, String> conf;
 
     /**
      *
@@ -65,11 +65,11 @@ public class CalcRulesBoltSheduler {
     }
 
     public CalcRulesBoltSheduler(java.util.Map config) {
-        conf =(Map<String,String>) config.get("Tsdb");
-        this.metatable =conf.get("metatable").getBytes();
+        conf = (Map<String, String>) config.get("Tsdb");
+        this.metatable = conf.get("metatable").getBytes();
         this.exruletable = conf.get("exrulestable").getBytes(); //"oddeye-exrules".getBytes();
     }
-    
+
     public void prepare() {
         LOGGER.warn("DoPrepare Calc Rules ");
 
@@ -95,8 +95,8 @@ public class CalcRulesBoltSheduler {
 
 //            this.metatable = String.valueOf(conf.get("metatable")).getBytes();
             try {
-                LOGGER.warn("Start read meta in hbase");                
-                MetricMetaList = new OddeeyMetricMetaList(globalFunctions.getTSDB(openTsdbConfig, clientconf), this.metatable,10);
+                LOGGER.warn("Start read meta in hbase");
+                MetricMetaList = new OddeeyMetricMetaList(globalFunctions.getTSDB(openTsdbConfig, clientconf), this.metatable, 10);
                 LOGGER.warn("End read meta in hbase");
             } catch (Exception ex) {
                 MetricMetaList = new OddeeyMetricMetaList();
@@ -117,19 +117,19 @@ public class CalcRulesBoltSheduler {
             ArrayList<ArrayList<KeyValue>> rows;
             starttime = System.currentTimeMillis();
 
-            long metriccount = 0;
+//            long metriccount = 0;
             long calmetriccount = 0;
             CalendarObjRules = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
             CalendarObjRules.add(Calendar.DATE, -1);
             CalendarObjRules.add(Calendar.HOUR, 2);
-            Map<String, Map<Integer, OddeeyMetricMeta>> namemap = new HashMap<>();
+            Map<String, Map<String, OddeeyMetricMeta>> namemap = new HashMap<>();
             for (Map.Entry<String, OddeeyMetricMeta> meta : MetricMetaList.entrySet()) {
 //                if ((!meta.getValue().isSpecial()) && (meta.getValue().getLasttime() > (starttime - (1000 * 60 * 60)))) {
                 if (!meta.getValue().isSpecial()) {
                     if (!namemap.containsKey(meta.getValue().getName())) {
                         namemap.put(meta.getValue().getName(), new HashMap<>());
                     }
-                    namemap.get(meta.getValue().getName()).put(meta.hashCode(), meta.getValue());
+                    namemap.get(meta.getValue().getName()).put(meta.getKey(), meta.getValue());
                 }
             }
             Map<String, Map<String, DescriptiveStatistics>> statslist = new HashMap<>();
@@ -151,8 +151,8 @@ public class CalcRulesBoltSheduler {
 
                     for (DataPoints[] series : query_results) {
                         for (final DataPoints datapoints : series) {
-                            final SeekableView Datalist = datapoints.iterator();                            
-                            LOGGER.info( datapoints.metricName() + " - " + datapoints.getTags());
+                            final SeekableView Datalist = datapoints.iterator();
+                            LOGGER.info(datapoints.metricName() + " - " + datapoints.getTags());
                             OddeeyMetricMeta tmpmetric = new OddeeyMetricMeta(datapoints.metricName(), datapoints.getTags(), tsdb);
                             while (Datalist.hasNext()) {
                                 final DataPoint Point = Datalist.next();
@@ -175,7 +175,7 @@ public class CalcRulesBoltSheduler {
                                     Metricstats.put(Hex.encodeHexString(time_key), stats);
                                 }
                                 stats.addValue(R_value);
-                                                              
+
                                 Metricstats = statslist.get("@" + tmpmetric.getName());
                                 if (Metricstats == null) {
                                     Metricstats = new HashMap<>();
@@ -186,7 +186,7 @@ public class CalcRulesBoltSheduler {
                                     stats = new DescriptiveStatistics();
                                     Metricstats.put(Hex.encodeHexString(time_key), stats);
                                 }
-                                stats.addValue(R_value);                                
+                                stats.addValue(R_value);
                             }
                         }
                     }
@@ -194,7 +194,7 @@ public class CalcRulesBoltSheduler {
                     return null;
                 }
             }
-            LOGGER.warn("namemap size= "+namemap.size());            
+            LOGGER.warn("namemap size= " + namemap.size());
             final Calendar CalObjRules = (Calendar) CalendarObjRules.clone();
             CalObjRules.set(Calendar.MILLISECOND, 0);
             CalObjRules.set(Calendar.SECOND, 0);
@@ -202,7 +202,7 @@ public class CalcRulesBoltSheduler {
             final Calendar CalObjRulesEnd = (Calendar) CalObjRules.clone();
             CalObjRulesEnd.add(Calendar.HOUR, 1);
             CalObjRulesEnd.add(Calendar.MILLISECOND, -1);
-            for (Map.Entry<String, Map<Integer, OddeeyMetricMeta>> nameSet : namemap.entrySet()) {
+            for (Map.Entry<String, Map<String, OddeeyMetricMeta>> nameSet : namemap.entrySet()) {
                 calmetriccount++;
                 String name = nameSet.getKey();
                 final TSQuery tsquery = new TSQuery();
@@ -224,11 +224,11 @@ public class CalcRulesBoltSheduler {
                     deferreds.add(tsdbqueries[nq].runAsync());
                 }
 //                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis()));
-                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();                
-                LOGGER.info("Metric "+name+" count " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");
+                Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();
+                LOGGER.info("Metric " + name + " count " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");
             }
-            System.out.println("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
-            LOGGER.warn("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
+            System.out.println("finish calc " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + " calmetriccount " + calmetriccount);
+//            LOGGER.warn("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
             for (Map.Entry<String, Map<String, DescriptiveStatistics>> stat : statslist.entrySet()) {
                 byte[] table;
                 if (stat.getKey().charAt(0) == '@') {
@@ -265,7 +265,7 @@ public class CalcRulesBoltSheduler {
                     }
                 }
             }
-            System.out.println("finish Write" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " in min " + metriccount + " calmetriccount " + calmetriccount);
+//            System.out.println("finish Write" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " in min " + metriccount + " calmetriccount " + calmetriccount);
             tsdb.shutdown().join();
             client.shutdown().join();
         } catch (Exception ex) {
