@@ -227,7 +227,7 @@ public class CalcRulesBoltSheduler {
                 Deferred.groupInOrder(deferreds).addCallback(new QueriesCB(CalObjRulesEnd.getTimeInMillis(), CalObjRules.getTimeInMillis())).join();
                 LOGGER.info("Metric " + name + " count " + calmetriccount + " from " + namemap.size() + "  in " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " min");
             }
-            System.out.println("finish calc " + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + " calmetriccount " + calmetriccount);
+            System.out.println("finish calc " + ((System.currentTimeMillis() - starttime) / 1000 ) + " " + " calmetriccount " + calmetriccount);
 //            LOGGER.warn("finish calc" + ((System.currentTimeMillis() - starttime) / 1000 / 60) + " " + metriccount + " calmetriccount " + calmetriccount);
             for (Map.Entry<String, Map<String, DescriptiveStatistics>> stat : statslist.entrySet()) {
                 byte[] table;
