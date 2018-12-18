@@ -38,9 +38,9 @@ import org.slf4j.LoggerFactory;
  *
  * @author vahan
  */
-public class CalcRulesBoltSheduler {
+public class CalcRulesBoltTestSheduler {
 
-    public static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(CalcRulesBoltSheduler.class);
+    public static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(CalcRulesBoltTestSheduler.class);
     private Config openTsdbConfig;
     private org.hbase.async.Config clientconf;
     private final byte[] metatable;
@@ -59,12 +59,12 @@ public class CalcRulesBoltSheduler {
     /**
      *
      */
-    public CalcRulesBoltSheduler() {
+    public CalcRulesBoltTestSheduler() {
         this.metatable = "oddeye-meta".getBytes();
         this.exruletable = "oddeye-exrules".getBytes();
     }
 
-    public CalcRulesBoltSheduler(java.util.Map config) {
+    public CalcRulesBoltTestSheduler(java.util.Map config) {
         conf =(Map<String,String>) config.get("Tsdb");
         this.metatable =conf.get("metatable").getBytes();
         this.exruletable = conf.get("exrulestable").getBytes(); //"oddeye-exrules".getBytes();

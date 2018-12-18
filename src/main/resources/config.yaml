@@ -1,6 +1,6 @@
 ## YAML Template.
 Tsdb:
-  zkHosts: "zk00.oddeye.co:2181,zk01.oddeye.co:2181,zk02.oddeye.co:2181"
+  zkHosts: "pve4.office.loc:2181"
   hbase.rpcs.batch.size: 4096       
   metatable: oddeye-meta
   exrulestable: oddeye-exrules
