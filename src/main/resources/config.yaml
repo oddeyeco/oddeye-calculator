@@ -1,9 +1,16 @@
 ## YAML Template.
---- 
-zkHosts: "zoo1.domain.com:2181,zoo2.domain.com:2181,zoo3.domain.com:2181"   
-oddeyerulestable: oddeyerules
-tsd.core.auto_create_metrics: false
-tsd.storage.enable_compaction: false
-tsd.storage.hbase.data_table: test_tsdb
-tsd.storage.hbase.uid_table: test_tsdb-uid
-   
+Tsdb:
+  zkHosts: "zoo1.domain.com:2181,zoo2.domain.com:2181,zoo3.domain.com:2181"
+  hbase.rpcs.batch.size: 4096       
+  metatable: oddeye-meta
+  exrulestable: oddeye-exrules
+  errorstable: oddeye-errors
+  errorshistorytable: oddeye-error-history
+  errorslasttable: oddeye-error-last
+  usertable: oddeyeusers  
+  consumptionusertable: oddeye-consumption  
+ 
+  tsd.core.auto_create_metrics: true
+  tsd.storage.enable_compaction: false
+  tsd.storage.hbase.data_table: oddeye-data
+  tsd.storage.hbase.uid_table: oddeye-data-uid
