@@ -1,6 +1,6 @@
 ## YAML Template.
 --- 
-zkHosts: "nn1.netangels.net:2181,nn2.netangels.net:2181,rm1.netangels.net:2181"   
+zkHosts: "zoo1.domain.com:2181,zoo2.domain.com:2181,zoo3.domain.com:2181"   
 oddeyerulestable: oddeyerules
 tsd.core.auto_create_metrics: false
 tsd.storage.enable_compaction: false
